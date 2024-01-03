@@ -103,6 +103,8 @@ cvar_t scoreboard_showdefkit = { "mp_scoreboard_showdefkit", "1", FCVAR_SERVER, 
 
 #endif
 
+cvar_t scoreboard_showc4dkspec = { "mp_scoreboard_showc4dkspec", "1", FCVAR_SERVER, 0.0f, nullptr };
+
 #ifdef REGAMEDLL_ADD
 
 cvar_t game_version          = { "game_version", APP_VERSION, FCVAR_SERVER, 0.0f, nullptr };
@@ -307,6 +309,8 @@ void EXT_FUNC GameDLLInit()
 	CVAR_REGISTER(&scoreboard_showmoney);
 	CVAR_REGISTER(&scoreboard_showdefkit);
 #endif
+
+CVAR_REGISTER(&scoreboard_showc4dkspec);
 
 // Remove unused cvars
 #ifndef REGAMEDLL_FIXES

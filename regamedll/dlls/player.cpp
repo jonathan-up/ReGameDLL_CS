@@ -3663,7 +3663,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(JoiningThink)()
 	}
 
 	if (m_pIntroCamera && gpGlobals->time >= m_fIntroCamTime
-#ifdef REGAMEDLL_FIXES 
+#ifdef REGAMEDLL_FIXES
 		&& m_fIntroCamTime > 0.0 // update only if cameras are available
 #endif
 		)
@@ -5470,7 +5470,8 @@ void CBasePlayer::SetScoreAttrib(CBasePlayer *dest)
 	}
 
 #endif
-
+	if (scoreboard_showc4dkspec.value)
+	{
 #ifdef REGAMEDLL_FIXES
 	// TODO: Remove these fixes when they are implemented on the client side
 	if (state & (SCORE_STATUS_BOMB | SCORE_STATUS_DEFKIT) && GetForceCamera(dest) != CAMERA_MODE_SPEC_ANYONE)
@@ -5479,6 +5480,7 @@ void CBasePlayer::SetScoreAttrib(CBasePlayer *dest)
 			state &= ~(SCORE_STATUS_BOMB | SCORE_STATUS_DEFKIT);
 	}
 #endif
+	}
 
 	if (gmsgScoreAttrib)
 	{

@@ -207,4 +207,6 @@ extern cvar_t scoreboard_showmoney;
 extern cvar_t scoreboard_showhealth;
 extern cvar_t scoreboard_showdefkit;
 
+extern cvar_t scoreboard_showc4dkspec;
+
 void GameDLLInit();
