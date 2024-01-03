@@ -189,6 +189,7 @@ void GameDLL_Version_f()
 	CONSOLE_ECHO("ReGameDLL version: " APP_VERSION "\n");
 	CONSOLE_ECHO("Build date: " APP_COMMIT_TIME " " APP_COMMIT_DATE "\n");
 	CONSOLE_ECHO("Build from: " APP_COMMIT_URL APP_COMMIT_SHA "\n");
+	CONSOLE_ECHO("H0meV For Counter-Strike\n");
 }
 
 void GameDLL_EndRound_f()
