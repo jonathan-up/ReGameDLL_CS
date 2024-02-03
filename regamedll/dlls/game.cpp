@@ -179,6 +179,7 @@ cvar_t hostages_rescued_ratio = { "mp_hostages_rescued_ratio", "1.0", 0, 1.0f, n
 cvar_t legacy_vehicle_block               = { "mp_legacy_vehicle_block", "1", 0, 0.0f, nullptr };
 
 cvar_t dying_time              = { "mp_dying_time", "3.0", 0, 3.0f, nullptr };
+cvar_t defuser_allocation      = { "mp_defuser_allocation", "0", 0, 0.0f, nullptr };
 
 void GameDLL_Version_f()
 {
@@ -444,6 +445,7 @@ CVAR_REGISTER(&scoreboard_showc4dkspec);
 
 	CVAR_REGISTER(&freezetime_duck);
 	CVAR_REGISTER(&freezetime_jump);
+	CVAR_REGISTER(&defuser_allocation);
 
 	// print version
 	CONSOLE_ECHO("ReGameDLL version: " APP_VERSION "\n");

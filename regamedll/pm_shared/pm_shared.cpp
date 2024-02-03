@@ -1345,26 +1345,26 @@ qboolean PM_InWater()
 // Sets pmove->waterlevel and pmove->watertype values.
 qboolean PM_CheckWater()
 {
-#ifdef REGAMEDLL_FIXES
-	// do not check for dead
-	if (pmove->dead || pmove->deadflag != DEAD_NO)
-		return FALSE;
-#endif
-
 	vec3_t point;
 	int cont;
 	int truecont;
 	float height;
 	float heightover2;
 
+	// Assume that we are not in water at all.
+	pmove->waterlevel = 0;
+	pmove->watertype = CONTENTS_EMPTY;
+
+#ifdef REGAMEDLL_FIXES
+	// do not check for dead
+	if (pmove->dead || pmove->deadflag != DEAD_NO)
+		return FALSE;
+#endif
+
 	// Pick a spot just above the players feet.
 	point[0] = pmove->origin[0] + (pmove->player_mins[pmove->usehull][0] + pmove->player_maxs[pmove->usehull][0]) * 0.5f;
 	point[1] = pmove->origin[1] + (pmove->player_mins[pmove->usehull][1] + pmove->player_maxs[pmove->usehull][1]) * 0.5f;
 	point[2] = pmove->origin[2] + pmove->player_mins[pmove->usehull][2] + 1;
-
-	// Assume that we are not in water at all.
-	pmove->waterlevel = 0;
-	pmove->watertype = CONTENTS_EMPTY;
 
 	// Grab point contents.
 	cont = pmove->PM_PointContents(point, &truecont);
@@ -1435,6 +1435,15 @@ void PM_CategorizePosition()
 	// this several times per frame, so we really need to avoid sticking to the bottom of
 	// water on each call, and the converse case will correct itself if called twice.
 	PM_CheckWater();
+
+	// Do not stick to the ground of an OBSERVER or NOCLIP mode
+#ifdef REGAMEDLL_FIXES
+	if (pmove->movetype == MOVETYPE_NOCLIP || pmove->movetype == MOVETYPE_NONE)
+	{
+		pmove->onground = -1;
+		return;
+	}
+#endif
 
 	point[0] = pmove->origin[0];
 	point[1] = pmove->origin[1];
@@ -3275,7 +3284,7 @@ void EXT_FUNC __API_HOOK(PM_Move)(struct playermove_s *ppmove, int server)
 	DbgAssert(pm_shared_initialized);
 
 	pmove = ppmove;
-	
+
 #ifdef REGAMEDLL_API
 	pmoveplayer = UTIL_PlayerByIndex(pmove->player_index + 1)->CSPlayer();
 #endif
