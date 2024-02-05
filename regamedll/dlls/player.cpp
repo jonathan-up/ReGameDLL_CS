@@ -5501,7 +5501,13 @@ void CBasePlayer::SetScoreAttrib(CBasePlayer *dest)
 	}
 
 #endif
-	if (!scoreboard_showc4dkspec.value)
+	if (
+#ifdef REGAMEDLL_ADD
+		!(bool)scoreboard_showc4dkspec.value
+#else
+		0
+#endif
+		)
 	{
 #ifdef REGAMEDLL_FIXES
 	// TODO: Remove these fixes when they are implemented on the client side
