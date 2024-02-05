@@ -200,6 +200,7 @@ extern cvar_t deathmsg_flags;
 extern cvar_t assist_damage_threshold;
 extern cvar_t freezetime_duck;
 extern cvar_t freezetime_jump;
+extern cvar_t scoreboard_showc4dkspec;
 extern cvar_t defuser_allocation;
 
 #endif
@@ -207,7 +208,5 @@ extern cvar_t defuser_allocation;
 extern cvar_t scoreboard_showmoney;
 extern cvar_t scoreboard_showhealth;
 extern cvar_t scoreboard_showdefkit;
-
-extern cvar_t scoreboard_showc4dkspec;
 
 void GameDLLInit();
