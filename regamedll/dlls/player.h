@@ -448,6 +448,7 @@ public:
 	edict_t *EntSelectSpawnPoint_OrigFunc();
 	void PlayerDeathThink_OrigFunc();
 	void Observer_Think_OrigFunc();
+	void RemoveAllItems_OrigFunc(BOOL removeSuit);
 
 	CCSPlayer *CSPlayer() const;
 #endif // REGAMEDLL_API
@@ -983,6 +984,19 @@ inline bool CBasePlayer::ShouldGibPlayer(int iGib)
 inline CBasePlayer *UTIL_PlayerByIndex(int playerIndex)
 {
 	return GET_PRIVATE<CBasePlayer>(INDEXENT(playerIndex));
+}
+
+// return true if the given player is valid
+inline bool UTIL_IsValidPlayer(CBaseEntity *pPlayer)
+{
+	return pPlayer && !FNullEnt(pPlayer->pev) && !pPlayer->IsDormant();
+}
+
+#else
+
+inline bool UTIL_IsValidPlayer(CBaseEntity *pPlayer)
+{
+	return pPlayer && !FNullEnt(pPlayer->pev);
 }
 
 #endif
