@@ -767,8 +767,8 @@ void Host_Say(edict_t *pEntity, BOOL teamonly)
 	entvars_t *pev = &pEntity->v;
 	CBasePlayer *pPlayer = GetClassPtr<CCSPlayer>((CBasePlayer *)pev);
 
-	// if (pPlayer->m_flLastTalk != 0.0f && gpGlobals->time - pPlayer->m_flLastTalk < 0.66f)
-	// 	return;
+	if (pPlayer->m_flLastTalk != 0.0f && gpGlobals->time - pPlayer->m_flLastTalk < 0.66f)
+		return;
 
 	pPlayer->m_flLastTalk = gpGlobals->time;
 
