@@ -132,6 +132,7 @@ This means that plugins that do binary code analysis (Orpheu for example) probab
 | mp_item_respawn_time               | 30      | 0.0 | -            | The respawn time for items (such as health packs, armor, etc.). |
 | mp_weapon_respawn_time             | 20      | 0.0 | -            | The respawn time for weapons. |
 | mp_ammo_respawn_time               | 20      | 0.0 | -            | The respawn time for ammunition. |
+| mp_scoreboard_fix                  | 0       | 0   | 1            | Enable ReGameDLL scoreboard bug fix(Dead players could see the bomb or defuse kit).<br/> `0` disabled<br/>`1` enabled<br/>`NOTE`: Absolutely cannot fix it in "CNCS😂" |
 | mp_vote_flags                      | km      | 0   | -            | Vote systems enabled in server.<br/>`0` voting disabled<br/>`k` votekick enabled via `vote` command<br/>`m` votemap enabled via `votemap` command |
 | mp_votemap_min_time                | 180     | 0.0 | -            | Minimum seconds that must elapse on map before `votemap` command can be used. |
 | mp_flymove_method                  | 0       | 0   | 1            | Set the method used for flymove calculations.<br/> `0` default method<br/>`1` alternative method (more accurate) |
@@ -143,7 +144,6 @@ This means that plugins that do binary code analysis (Orpheu for example) probab
 | mp_playerid_showhealth             | 1       | 0   | 2            | Player ID display mode.<br/>`0` don't show health<br/>`1` show health for teammates only (default CS behaviour)<br/>`2` show health for all players |
 | mp_playerid_field                  | 3       | 0   | 3            | Player ID field display mode.<br/>`0` don't show additional information<br/>`1` show team name<br/>`2` show health percentage<br/>`3` show both team name and health percentage |
 | mp_knockback                       | 170     | -   | -            | Knockback force applied to the victim when damaged by strong weapons (e.g. `AWP`, `AK47`).<br/>Works only if not crouching, and not hit in the legs.<br/>Set to `0` to disable. |
-
 </details>
 
 ## How to install zBot for CS 1.6?

@@ -218,6 +218,8 @@ extern cvar_t playerid_showhealth;
 extern cvar_t playerid_field;
 extern cvar_t knockback;
 
+extern cvar_t scoreboard_fix;
+
 #endif
 
 extern cvar_t scoreboard_showmoney;
