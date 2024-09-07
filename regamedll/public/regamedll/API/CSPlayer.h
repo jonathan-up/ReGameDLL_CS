@@ -187,6 +187,9 @@ public:
 
 	int m_iGibDamageThreshold; // negative health to reach to gib player
 	usercmd_t m_LastCmd;
+
+	// Player movement version control
+	PlayerMovementVersion m_MovementVersion;
 };
 
 // Inlines

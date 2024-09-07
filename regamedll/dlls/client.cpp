@@ -133,6 +133,7 @@ static entity_field_alias_t custom_entity_field_alias[] =
 	{ "animtime",  0 },
 };
 
+edict_t *g_pEdicts = nullptr;
 bool g_bServerActive = false;
 bool g_bItemCreatedByBuying = false;
 PLAYERPVSSTATUS g_PVSStatus[MAX_CLIENTS];
@@ -3310,6 +3311,26 @@ void EXT_FUNC InternalCommand(edict_t *pEntity, const char *pcmd, const char *pa
 		}
 	}
 #endif
+
+#ifdef REGAMEDLL_ADD
+	// Request from client for the given version of player movement control, if any
+	else if (FStrEq(pcmd, "cl_pmove_version"))
+	{
+		// cl_pmove_version <num>
+		if (CMD_ARGC_() < 2)
+			return; // invalid
+
+		PlayerMovementVersion &playerMovementVersion = pPlayer->CSPlayer()->m_MovementVersion;
+		playerMovementVersion.Set(parg1);
+
+		// If the client's requested movement version is newer, enforce it to the available one
+		if (playerMovementVersion.IsGreaterThan(PM_VERSION))
+		{
+			playerMovementVersion.Set(PM_VERSION); // reset to available version
+			CLIENT_COMMAND(pEntity, "cl_pmove_version %s\n", playerMovementVersion.ToString());
+		}
+	}
+#endif
 	else
 	{
 		if (g_pGameRules->ClientCommand_DeadOrAlive(GetClassPtr<CCSPlayer>((CBasePlayer *)pev), pcmd))
@@ -3738,6 +3759,22 @@ void EXT_FUNC ServerDeactivate()
 
 void EXT_FUNC ServerActivate(edict_t *pEdictList, int edictCount, int clientMax)
 {
+	g_pEdicts = pEdictList;
+
+#ifdef REGAMEDLL_ADD
+	//
+	// Tells clients which version of player movement (pmove) the server is using
+	//
+	// In GoldSrc, both the server and clients handle player movement using shared code.
+	// If the server changes how movement works, due to improvements or bugfixes, it can mess up
+	// the client's movement prediction, causing desync. To avoid this, the server can tell clients what
+	// version of the movement code it's using. Clients that don't recognize or respond to this version
+	// will be treated as using the previous behavior, and the server will handle them accordingly.
+	// Clients that do recognize it will let the server know, so everything stays in sync.
+	//
+	SET_KEY_VALUE(GET_INFO_BUFFER(pEdictList), "pmove", PM_ServerVersion());
+#endif
+
 	int i;
 	CBaseEntity *pClass;
 
