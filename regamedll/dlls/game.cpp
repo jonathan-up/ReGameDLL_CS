@@ -185,6 +185,9 @@ cvar_t item_respawn_time       = { "mp_item_respawn_time", "30", FCVAR_SERVER, 3
 cvar_t weapon_respawn_time     = { "mp_weapon_respawn_time", "20", FCVAR_SERVER, 20.0f, nullptr };
 cvar_t ammo_respawn_time       = { "mp_ammo_respawn_time", "20", FCVAR_SERVER, 20.0f, nullptr };
 
+cvar_t vote_flags              = { "mp_vote_flags", "km", 0, 0.0f, nullptr };
+cvar_t votemap_min_time        = { "mp_votemap_min_time", "180", 0, 180.0f, nullptr };
+
 cvar_t scoreboard_fix = { "mp_scoreboard_fix", "0", FCVAR_SERVER, 0.0f, nullptr };
 
 void GameDLL_Version_f()
@@ -455,8 +458,11 @@ void EXT_FUNC GameDLLInit()
 	CVAR_REGISTER(&item_respawn_time);
 	CVAR_REGISTER(&weapon_respawn_time);
 	CVAR_REGISTER(&ammo_respawn_time);
-  
-  CVAR_REGISTER(&scoreboard_fix);
+
+	CVAR_REGISTER(&vote_flags);
+	CVAR_REGISTER(&votemap_min_time);
+
+	CVAR_REGISTER(&scoreboard_fix);
 
 	// print version
 	CONSOLE_ECHO("ReGameDLL version: " APP_VERSION "\n");

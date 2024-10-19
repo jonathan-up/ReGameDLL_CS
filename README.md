@@ -29,6 +29,7 @@ This means that plugins that do binary code analysis (Orpheu for example) probab
 | swapteams                           | Swap the teams and restart the game (1 sec delay to restart by default).<br/> Args: <br/>`0` - swap teams without restart. <br/> `>0.001` - time delay in seconds to restart the round after swap. |
 | give                                | Give weapon command.<br/> Args:<br/><weapon_name><br/>Usage:<br/>`give weapon_ak47`<br/>`give weapon_usp`<br/><br/>NOTE: `sv_cheats 1` required. |
 | impulse 255                         | Give all weapons.<br/><br/>NOTE: `sv_cheats 1` required. |
+| impulse 200                         | Noclip with air acceleration.<br/><br/>NOTE: `sv_cheats 1` required. |
 
 ## Configuration (cvars)
 <details>
@@ -120,6 +121,8 @@ This means that plugins that do binary code analysis (Orpheu for example) probab
 | mp_item_respawn_time               | 30      | 0.0 | -            | The respawn time for items (such as health packs, armor, etc.). |
 | mp_weapon_respawn_time             | 20      | 0.0 | -            | The respawn time for weapons. |
 | mp_ammo_respawn_time               | 20      | 0.0 | -            | The respawn time for ammunition. |
+| mp_vote_flags                      | km      | 0   | -            | Vote systems enabled in server.<br/>`0` voting disabled<br/>`k` votekick enabled via `vote` command<br/>`m` votemap enabled via `votemap` command |
+| mp_votemap_min_time                | 180     | 0.0 | -            | Minimum seconds that must elapse on map before `votemap` command can be used. |
 | mp_scoreboard_fix                  | 0       | 0   | 1            | Enable ReGameDLL scoreboard bug fix(Dead players could see the bomb or defuse kit).<br/> `0` disabled<br/>`1` enabled<br/>`NOTE`: Absolutely cannot fix it in "CNCS😂" |
 </details>
 

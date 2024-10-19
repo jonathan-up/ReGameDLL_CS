@@ -652,11 +652,11 @@ void CBasePlayerWeapon::SetPlayerShieldAnim()
 
 	if (m_iWeaponState & WPNSTATE_SHIELD_DRAWN)
 	{
-		Q_strcpy(m_pPlayer->m_szAnimExtention, "shield");
+		Q_strlcpy(m_pPlayer->m_szAnimExtention, "shield");
 	}
 	else
 	{
-		Q_strcpy(m_pPlayer->m_szAnimExtention, "shieldgun");
+		Q_strlcpy(m_pPlayer->m_szAnimExtention, "shieldgun");
 	}
 }
 
@@ -666,7 +666,7 @@ void CBasePlayerWeapon::ResetPlayerShieldAnim()
 	{
 		if (m_iWeaponState & WPNSTATE_SHIELD_DRAWN)
 		{
-			Q_strcpy(m_pPlayer->m_szAnimExtention, "shieldgun");
+			Q_strlcpy(m_pPlayer->m_szAnimExtention, "shieldgun");
 		}
 	}
 }
@@ -697,7 +697,7 @@ bool CBasePlayerWeapon::ShieldSecondaryFire(int iUpAnim, int iDownAnim)
 	{
 		m_iWeaponState &= ~WPNSTATE_SHIELD_DRAWN;
 		SendWeaponAnim(iDownAnim, UseDecrement() != FALSE);
-		Q_strcpy(m_pPlayer->m_szAnimExtention, "shieldgun");
+		Q_strlcpy(m_pPlayer->m_szAnimExtention, "shieldgun");
 		m_fMaxSpeed = 250.0f;
 		m_pPlayer->m_bShieldDrawn = false;
 	}
@@ -705,7 +705,7 @@ bool CBasePlayerWeapon::ShieldSecondaryFire(int iUpAnim, int iDownAnim)
 	{
 		m_iWeaponState |= WPNSTATE_SHIELD_DRAWN;
 		SendWeaponAnim(iUpAnim, UseDecrement() != FALSE);
-		Q_strcpy(m_pPlayer->m_szAnimExtention, "shielded");
+		Q_strlcpy(m_pPlayer->m_szAnimExtention, "shielded");
 		m_fMaxSpeed = 180.0f;
 		m_pPlayer->m_bShieldDrawn = true;
 	}
@@ -724,6 +724,41 @@ LINK_HOOK_CLASS_VOID_CHAIN(CBasePlayerWeapon, KickBack, (float up_base, float la
 
 void EXT_FUNC CBasePlayerWeapon::__API_HOOK(KickBack)(float up_base, float lateral_base, float up_modifier, float lateral_modifier, float up_max, float lateral_max, int direction_change)
 {
+#ifdef REGAMEDLL_ADD
+	real_t flKickUp = up_base;
+	float flKickLateral = lateral_base;
+
+	if (m_iShotsFired > 1) // consider == 0 case
+	{
+		flKickUp += m_iShotsFired * up_modifier;
+		flKickLateral += m_iShotsFired * lateral_modifier;
+	}
+
+	if (up_max == 0.0f) // boundaryless vertical kick
+	{
+		m_pPlayer->pev->punchangle.x -= flKickUp;
+	}
+	else if (m_pPlayer->pev->punchangle.x > -up_max) // do not kick when already out of boundaries
+	{
+		m_pPlayer->pev->punchangle.x = Q_max<real_t>(m_pPlayer->pev->punchangle.x - flKickUp, -up_max);
+	}
+
+	if (lateral_max == 0.0f) // boundaryless horizontal kick
+	{
+		m_pPlayer->pev->punchangle.y += flKickLateral * (m_iDirection * 2 - 1);
+	}
+	else if (Q_fabs(m_pPlayer->pev->punchangle.y) < lateral_max) // do not kick when already out of boundaries
+	{
+		m_pPlayer->pev->punchangle.y = (m_iDirection == 1) ?
+			Q_min(m_pPlayer->pev->punchangle.y + flKickLateral, lateral_max) :
+			Q_max(m_pPlayer->pev->punchangle.y - flKickLateral, -lateral_max);
+	}
+
+	if (direction_change > 0 && !RANDOM_LONG(0, direction_change)) // be sure to not waste RNG consumption
+	{
+		m_iDirection = !m_iDirection;
+	}
+#else
 	real_t flKickUp;
 	float flKickLateral;
 
@@ -764,6 +799,7 @@ void EXT_FUNC CBasePlayerWeapon::__API_HOOK(KickBack)(float up_base, float later
 	{
 		m_iDirection = !m_iDirection;
 	}
+#endif
 }
 
 void CBasePlayerWeapon::FireRemaining(int &shotsFired, float &shootTime, BOOL bIsGlock)
@@ -1455,7 +1491,7 @@ BOOL EXT_FUNC CBasePlayerWeapon::__API_HOOK(DefaultDeploy)(char *szViewModel, ch
 	m_pPlayer->pev->weaponmodel = MAKE_STRING(szWeaponModel);
 #endif
 	model_name = m_pPlayer->pev->viewmodel;
-	Q_strcpy(m_pPlayer->m_szAnimExtention, szAnimExt);
+	Q_strlcpy(m_pPlayer->m_szAnimExtention, szAnimExt);
 	SendWeaponAnim(iAnim, skiplocal);
 
 	m_pPlayer->m_flNextAttack = 0.75f;
@@ -1635,6 +1671,10 @@ void CBasePlayerWeapon::Holster(int skiplocal)
 	m_fInReload = FALSE;
 	m_pPlayer->pev->viewmodel = 0;
 	m_pPlayer->pev->weaponmodel = 0;
+
+#ifdef REGAMEDLL_FIXES
+	m_fInSpecialReload = 0;
+#endif
 }
 
 // called by the new item with the existing item as parameter

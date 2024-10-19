@@ -569,13 +569,20 @@ LINK_HOOK_CLASS_VOID_CHAIN2(CBasePlayer, DeathSound)
 
 void EXT_FUNC CBasePlayer::__API_HOOK(DeathSound)()
 {
+#if REGAMEDLL_FIXES
+	// FIXED: Don't interrupt pain sounds with death sound, use any available channel instead
+	const int channel = CHAN_AUTO;
+#else
+	const int channel = CHAN_VOICE;
+#endif
+
 	// temporarily using pain sounds for death sounds
 	switch (RANDOM_LONG(1, 4))
 	{
-	case 1: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die1.wav", VOL_NORM, ATTN_NORM); break;
-	case 2: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die2.wav", VOL_NORM, ATTN_NORM); break;
-	case 3: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/die3.wav", VOL_NORM, ATTN_NORM); break;
-	case 4: EMIT_SOUND(ENT(pev), CHAN_VOICE, "player/death6.wav", VOL_NORM, ATTN_NORM); break;
+	case 1: EMIT_SOUND(ENT(pev), channel, "player/die1.wav", VOL_NORM, ATTN_NORM); break;
+	case 2: EMIT_SOUND(ENT(pev), channel, "player/die2.wav", VOL_NORM, ATTN_NORM); break;
+	case 3: EMIT_SOUND(ENT(pev), channel, "player/die3.wav", VOL_NORM, ATTN_NORM); break;
+	case 4: EMIT_SOUND(ENT(pev), channel, "player/death6.wav", VOL_NORM, ATTN_NORM); break;
 	}
 }
 
@@ -2556,11 +2563,19 @@ BOOL CBasePlayer::IsBombGuy()
 
 LINK_HOOK_CLASS_VOID_CHAIN(CBasePlayer, SetAnimation, (PLAYER_ANIM playerAnim), playerAnim)
 
+int CBasePlayer::GetAnimDesired(const char *szAnim, AnimationType type)
+{
+	const char *refAnim = (type == ANIM_CROUCH && (pev->flags & FL_DUCKING)) ? "crouch_" : "ref_";
+
+	char szAnimConstruct[128];
+	Q_snprintf(szAnimConstruct, sizeof(szAnimConstruct), "%s%s_%s", refAnim, szAnim, m_szAnimExtention);
+	return LookupSequence(szAnimConstruct);
+}
+
 void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 {
 	int animDesired;
 	float speed;
-	char szAnim[64];
 	int hopSeq;
 	int leapSeq;
 
@@ -2696,16 +2711,17 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 			if (m_Activity == m_IdealActivity)
 				return;
 
+			const char *refAnim;
+
 			switch (m_Activity)
 			{
-			case ACT_RANGE_ATTACK1:	Q_strcpy(szAnim, "ref_shoot_"); break;
-			case ACT_RANGE_ATTACK2:	Q_strcpy(szAnim, "ref_shoot2_"); break;
-			case ACT_RELOAD:	Q_strcpy(szAnim, "ref_reload_"); break;
-			default:		Q_strcpy(szAnim, "ref_aim_"); break;
+			case ACT_RANGE_ATTACK1:	refAnim = "shoot";  break;
+			case ACT_RANGE_ATTACK2:	refAnim = "shoot2"; break;
+			case ACT_RELOAD:        refAnim = "reload"; break;
+			default:                refAnim = "aim";    break;
 			}
 
-			Q_strcat(szAnim, m_szAnimExtention);
-			animDesired = LookupSequence(szAnim);
+			animDesired = GetAnimDesired(refAnim, ANIM_NORMAL);
 			if (animDesired == -1)
 				animDesired = 0;
 
@@ -2727,13 +2743,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 		{
 			m_flLastFired = gpGlobals->time;
 
-			if (pev->flags & FL_DUCKING)
-				Q_strcpy(szAnim, "crouch_shoot_");
-			else
-				Q_strcpy(szAnim, "ref_shoot_");
-
-			Q_strcat(szAnim, m_szAnimExtention);
-			animDesired = LookupSequence(szAnim);
+			animDesired = GetAnimDesired("shoot", ANIM_CROUCH);
 			if (animDesired == -1)
 				animDesired = 0;
 
@@ -2748,13 +2758,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 		{
 			m_flLastFired = gpGlobals->time;
 
-			if (pev->flags & FL_DUCKING)
-				Q_strcpy(szAnim, "crouch_shoot2_");
-			else
-				Q_strcpy(szAnim, "ref_shoot2_");
-
-			Q_strcat(szAnim, m_szAnimExtention);
-			animDesired = LookupSequence(szAnim);
+			animDesired = GetAnimDesired("shoot2", ANIM_CROUCH);
 			if (animDesired == -1)
 				animDesired = 0;
 
@@ -2767,13 +2771,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 		}
 		case ACT_RELOAD:
 		{
-			if (pev->flags & FL_DUCKING)
-				Q_strcpy(szAnim, "crouch_reload_");
-			else
-				Q_strcpy(szAnim, "ref_reload_");
-
-			Q_strcat(szAnim, m_szAnimExtention);
-			animDesired = LookupSequence(szAnim);
+			animDesired = GetAnimDesired("reload", ANIM_CROUCH);
 			if (animDesired == -1)
 				animDesired = 0;
 
@@ -2788,13 +2786,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 		}
 		case ACT_HOLDBOMB:
 		{
-			if (pev->flags & FL_DUCKING)
-				Q_strcpy(szAnim, "crouch_aim_");
-			else
-				Q_strcpy(szAnim, "ref_aim_");
-
-			Q_strcat(szAnim, m_szAnimExtention);
-			animDesired = LookupSequence(szAnim);
+			animDesired = GetAnimDesired("aim", ANIM_CROUCH);
 			if (animDesired == -1)
 				animDesired = 0;
 
@@ -2811,13 +2803,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 			{
 				if (speed <= 135.0f || m_flLastFired + 4.0 >= gpGlobals->time)
 				{
-					if (pev->flags & FL_DUCKING)
-						Q_strcpy(szAnim, "crouch_aim_");
-					else
-						Q_strcpy(szAnim, "ref_aim_");
-
-					Q_strcat(szAnim, m_szAnimExtention);
-					animDesired = LookupSequence(szAnim);
+					animDesired = GetAnimDesired("aim", ANIM_CROUCH);
 					if (animDesired == -1)
 						animDesired = 0;
 
@@ -2825,18 +2811,10 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 				}
 				else
 				{
-					Q_strcpy(szAnim, "run_");
-					Q_strcat(szAnim, m_szAnimExtention);
-					animDesired = LookupSequence(szAnim);
+					animDesired = GetAnimDesired("run", ANIM_NORMAL);
 					if (animDesired == -1)
 					{
-						if (pev->flags & FL_DUCKING)
-							Q_strcpy(szAnim, "crouch_aim_");
-						else
-							Q_strcpy(szAnim, "ref_aim_");
-
-						Q_strcat(szAnim, m_szAnimExtention);
-						animDesired = LookupSequence(szAnim);
+						animDesired = GetAnimDesired("aim", ANIM_CROUCH);
 						if (animDesired == -1)
 							animDesired = 0;
 
@@ -3086,20 +3064,9 @@ void EXT_FUNC CBasePlayer::__API_HOOK(SetAnimation)(PLAYER_ANIM playerAnim)
 				{
 					if (m_Activity != ACT_FLINCH && m_Activity != ACT_LARGE_FLINCH)
 					{
-						Q_strcpy(szAnim, "run_");
-						Q_strcat(szAnim, m_szAnimExtention);
-
-						animDesired = LookupSequence(szAnim);
+						animDesired = GetAnimDesired("run", ANIM_NORMAL);
 						if (animDesired == -1)
-						{
-							if (pev->flags & FL_DUCKING)
-								Q_strcpy(szAnim, "crouch_aim_");
-							else
-								Q_strcpy(szAnim, "ref_aim_");
-
-							Q_strcat(szAnim, m_szAnimExtention);
-							animDesired = LookupSequence(szAnim);
-						}
+							animDesired = GetAnimDesired("aim", ANIM_CROUCH);
 						else
 							pev->gaitsequence = animDesired;
 
@@ -4248,11 +4215,15 @@ void CBasePlayer::PlayerUse()
 		}
 	}
 
+	int caps;
+	int iClosestCaps = 0;
+
 	if (!pClosest)
 	{
 		while ((pObject = UTIL_FindEntityInSphere(pObject, pev->origin, MAX_PLAYER_USE_RADIUS)))
 		{
-			if (pObject->ObjectCaps() & (FCAP_IMPULSE_USE | FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE))
+			caps = pObject->ObjectCaps();
+			if (caps & (FCAP_IMPULSE_USE | FCAP_CONTINUOUS_USE | FCAP_ONOFF_USE))
 			{
 				// TODO: PERFORMANCE- should this check be done on a per case basis AFTER we've determined that
 				// this object is actually usable? This dot is being done for every object within PLAYER_SEARCH_RADIUS
@@ -4267,11 +4238,21 @@ void CBasePlayer::PlayerUse()
 				{
 					flMaxDot = flDot;
 					pClosest = pObject;
+#ifdef REGAMEDLL_FIXES
+					iClosestCaps = caps;
+#endif
 				}
 			}
 		}
 	}
+#ifdef REGAMEDLL_FIXES
+	else // catch new hostages caps
+	{
+		iClosestCaps = pClosest->ObjectCaps();
+	}
 
+	caps = iClosestCaps;
+#endif
 	pObject = pClosest;
 
 	// Found an object
@@ -4280,8 +4261,9 @@ void CBasePlayer::PlayerUse()
 		if (!useNewHostages || CanSeeUseable(this, pObject))
 		{
 			// TODO: traceline here to prevent +USEing buttons through walls
+#ifndef REGAMEDLL_FIXES
 			int caps = pObject->ObjectCaps();
-
+#endif
 			if (m_afButtonPressed & IN_USE)
 				EMIT_SOUND(ENT(pev), CHAN_ITEM, "common/wpn_select.wav", 0.4, ATTN_NORM);
 
@@ -4295,7 +4277,12 @@ void CBasePlayer::PlayerUse()
 			}
 			// UNDONE: Send different USE codes for ON/OFF.  Cache last ONOFF_USE object to send 'off' if you turn away
 			// BUGBUG This is an "off" use
-			else if ((m_afButtonReleased & IN_USE) && (pObject->ObjectCaps() & FCAP_ONOFF_USE))
+			else if ((m_afButtonReleased & IN_USE)
+#ifdef REGAMEDLL_FIXES
+				&& (caps & FCAP_ONOFF_USE))
+#else
+				&& (pObject->ObjectCaps() & FCAP_ONOFF_USE))
+#endif
 			{
 				pObject->Use(this, this, USE_SET, 0);
 			}
@@ -5027,8 +5014,7 @@ void CBasePlayer::CheckSuitUpdate()
 			{
 				// play sentence number
 				char sentence[MAX_SENTENCE_NAME + 1];
-				Q_strcpy(sentence, "!");
-				Q_strcat(sentence, gszallsentencenames[isentence]);
+				Q_snprintf(sentence, sizeof(sentence), "!%s", gszallsentencenames[isentence]);
 				EMIT_SOUND_SUIT(ENT(pev), sentence);
 			}
 			else
@@ -5353,11 +5339,6 @@ BOOL IsSpawnPointValid(CBaseEntity *pPlayer, CBaseEntity *pSpot)
 {
 	if (!pSpot->IsTriggered(pPlayer))
 		return FALSE;
-
-#ifdef REGAMEDLL_ADD
-	if (!kill_filled_spawn.value)
-		return TRUE;
-#endif
 
 	CBaseEntity *pEntity = nullptr;
 	while ((pEntity = UTIL_FindEntityInSphere(pEntity, pSpot->pev->origin, MAX_PLAYER_USE_RADIUS)))
@@ -6778,6 +6759,26 @@ void CBasePlayer::CheatImpulseCommands(int iImpulse)
 
 			break;
 		}
+#ifdef REGAMEDLL_ADD
+		// noclip with air acceleration
+		case 200:
+		{
+			if (pev->movetype == MOVETYPE_WALK)
+			{
+				pev->movetype = MOVETYPE_NOCLIP;
+				pev->fuser3 = MAX_PLAYER_RUN_MODIFIER_SPEED; // air acceleration increases xN times
+				ALERT(at_console, "noclip ON\n");
+			}
+			else
+			{
+				pev->movetype = MOVETYPE_WALK;
+				pev->fuser3 = 0;
+				ALERT(at_console, "noclip OFF\n");
+			}
+
+			break;
+		}
+#endif
 		case 202:
 		{
 			// Random blood splatter
@@ -8049,7 +8050,7 @@ void CBasePlayer::UpdateStatusBar()
 	char sbuf0[MAX_SBAR_STRING];
 
 	Q_memset(newSBarState, 0, sizeof(newSBarState));
-	Q_strcpy(sbuf0, m_SbarString0);
+	Q_strlcpy(sbuf0, m_SbarString0);
 
 	// Find an ID Target
 	TraceResult tr;
@@ -8079,9 +8080,9 @@ void CBasePlayer::UpdateStatusBar()
 				if (sameTeam || GetObserverMode() != OBS_NONE)
 				{
 					if (playerid.value != PLAYERID_MODE_OFF || GetObserverMode() != OBS_NONE)
-						Q_strcpy(sbuf0, "1 %c1: %p2\n2  %h: %i3%%");
+						Q_strlcpy(sbuf0, "1 %c1: %p2\n2  %h: %i3%%");
 					else
-						Q_strcpy(sbuf0, " ");
+						Q_strlcpy(sbuf0, " ");
 
 					newSBarState[SBAR_ID_TARGETHEALTH] = int((pEntity->pev->health / pEntity->pev->max_health) * 100);
 
@@ -8094,9 +8095,9 @@ void CBasePlayer::UpdateStatusBar()
 				else if (GetObserverMode() == OBS_NONE)
 				{
 					if (playerid.value != PLAYERID_MODE_TEAMONLY && playerid.value != PLAYERID_MODE_OFF)
-						Q_strcpy(sbuf0, "1 %c1: %p2");
+						Q_strlcpy(sbuf0, "1 %c1: %p2");
 					else
-						Q_strcpy(sbuf0, " ");
+						Q_strlcpy(sbuf0, " ");
 
 					if (!(m_flDisplayHistory & DHF_ENEMY_SEEN))
 					{
@@ -8110,9 +8111,9 @@ void CBasePlayer::UpdateStatusBar()
 			else if (pEntity->Classify() == CLASS_HUMAN_PASSIVE)
 			{
 				if (playerid.value != PLAYERID_MODE_OFF || GetObserverMode() != OBS_NONE)
-					Q_strcpy(sbuf0, "1 %c1  %h: %i3%%");
+					Q_strlcpy(sbuf0, "1 %c1  %h: %i3%%");
 				else
-					Q_strcpy(sbuf0, " ");
+					Q_strlcpy(sbuf0, " ");
 
 				newSBarState[SBAR_ID_TARGETTYPE] = SBAR_TARGETTYPE_HOSTAGE;
 				newSBarState[SBAR_ID_TARGETHEALTH] = int((pEntity->pev->health / pEntity->pev->max_health) * 100);
@@ -8154,7 +8155,7 @@ void CBasePlayer::UpdateStatusBar()
 			WRITE_STRING(sbuf0);
 		MESSAGE_END();
 
-		Q_strcpy(m_SbarString0, sbuf0);
+		Q_strlcpy(m_SbarString0, sbuf0);
 
 		// make sure everything's resent
 		bForceResend = true;
@@ -9345,14 +9346,10 @@ void CBasePlayer::AddAutoBuyData(const char *str)
 	{
 		if (len > 0)
 		{
-			Q_strncat(m_autoBuyString, " ", len);
+			Q_strlcat(m_autoBuyString, " ");
 		}
 
-#ifndef REGAMEDLL_FIXES
-		Q_strncat(m_autoBuyString, str, sizeof(m_autoBuyString) - Q_strlen(m_autoBuyString));
-#else
-		Q_strncat(m_autoBuyString, str, sizeof(m_autoBuyString) - Q_strlen(m_autoBuyString) - 1);
-#endif
+		Q_strlcat(m_autoBuyString, str);
 	}
 }
 
@@ -9369,9 +9366,7 @@ void CBasePlayer::InitRebuyData(const char *str)
 		m_rebuyString = nullptr;
 	}
 
-	m_rebuyString = new char[Q_strlen(str) + 1];
-	Q_strcpy(m_rebuyString, str);
-	m_rebuyString[Q_strlen(str)] = '\0';
+	m_rebuyString = CloneString(str);
 }
 
 void CBasePlayer::AutoBuy()
@@ -9399,7 +9394,7 @@ void CBasePlayer::AutoBuy()
 
 	if (c)
 	{
-		Q_strcpy(prioritizedString, c);
+		Q_strlcpy(prioritizedString, c);
 
 		PrioritizeAutoBuyString(prioritizedString, m_autoBuyString);
 		ParseAutoBuyString(prioritizedString, boughtPrimary, boughtSecondary);
@@ -9409,7 +9404,7 @@ void CBasePlayer::AutoBuy()
 
 	if (c)
 	{
-		Q_strcpy(prioritizedString, c);
+		Q_strlcpy(prioritizedString, c);
 
 		PrioritizeAutoBuyString(prioritizedString, m_autoBuyString);
 		ParseAutoBuyString(prioritizedString, boughtPrimary, boughtSecondary);
@@ -9557,11 +9552,11 @@ const char *CBasePlayer::PickPrimaryCareerTaskWeapon()
 		CCareerTask *pTask = taskVector[i];
 
 		if (IsPrimaryWeaponId(pTask->GetWeaponId()))
-			Q_strncat(buf, WeaponIDToAlias(pTask->GetWeaponId()), sizeof(buf) - Q_strlen(buf) - 1);
+			Q_strlcat(buf, WeaponIDToAlias(pTask->GetWeaponId()));
 		else
-			Q_strncat(buf, GetBuyStringForWeaponClass(pTask->GetWeaponClassId()), sizeof(buf) - Q_strlen(buf) - 1);
+			Q_strlcat(buf, GetBuyStringForWeaponClass(pTask->GetWeaponClassId()));
 
-		Q_strncat(buf, " ", sizeof(buf) - Q_strlen(buf) - 1);
+		Q_strlcat(buf, " ");
 	}
 
 	return buf;
@@ -9632,11 +9627,11 @@ const char *CBasePlayer::PickSecondaryCareerTaskWeapon()
 		CCareerTask *pTask = taskVector[i];
 
 		if (IsSecondaryWeaponId(pTask->GetWeaponId()))
-			Q_strncat(buf, WeaponIDToAlias(pTask->GetWeaponId()), sizeof(buf) - Q_strlen(buf) - 1);
+			Q_strlcat(buf, WeaponIDToAlias(pTask->GetWeaponId()));
 		else
-			Q_strncat(buf, GetBuyStringForWeaponClass(pTask->GetWeaponClassId()), sizeof(buf) - Q_strlen(buf) - 1);
+			Q_strlcat(buf, GetBuyStringForWeaponClass(pTask->GetWeaponClassId()));
 
-		Q_strncat(buf, " ", sizeof(buf) - Q_strlen(buf) - 1);
+		Q_strlcat(buf, " ");
 	}
 
 	return buf;
@@ -9685,7 +9680,7 @@ const char *CBasePlayer::PickGrenadeKillWeaponString()
 }
 
 // PostAutoBuyCommandProcessing - reorders the tokens in autobuyString based on the order of tokens in the priorityString.
-void CBasePlayer::PrioritizeAutoBuyString(char *autobuyString, const char *priorityString)
+void CBasePlayer::PrioritizeAutoBuyString(char (&autobuyString)[MAX_AUTOBUY_LENGTH], const char *priorityString)
 {
 	char newString[MAX_AUTOBUY_LENGTH];
 	int newStringPos = 0;
@@ -9758,7 +9753,7 @@ void CBasePlayer::PrioritizeAutoBuyString(char *autobuyString, const char *prior
 	// terminate the string.  Trailing spaces shouldn't matter.
 	newString[newStringPos] = '\0';
 
-	Q_sprintf(autobuyString, "%s", newString);
+	Q_snprintf(autobuyString, sizeof(autobuyString), "%s", newString);
 }
 
 void CBasePlayer::ParseAutoBuyString(const char *string, bool &boughtPrimary, bool &boughtSecondary)
