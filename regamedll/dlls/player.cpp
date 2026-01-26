@@ -698,27 +698,19 @@ void EXT_FUNC CBasePlayer::__API_HOOK(TraceAttack)(entvars_t *pevAttacker, float
 
 	if (bHitShield)
 	{
+#ifndef REGAMEDLL_FIXES
+		// BUGBUG: zeroing out damage BEFORE altering victim's punchangle
+		// will simply nullify any previous punchangles
 		flDamage = 0;
+#endif
+
 		bShouldBleed = false;
+		HitShield(flDamage, ptr);
 
-		if (RANDOM_LONG(0, 1))
-			EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/ric_metal-1.wav", VOL_NORM, ATTN_NORM);
-		else
-			EMIT_SOUND(ENT(pev), CHAN_VOICE, "weapons/ric_metal-2.wav", VOL_NORM, ATTN_NORM);
-
-		UTIL_Sparks(ptr->vecEndPos);
-
-		pev->punchangle.x = flDamage * RANDOM_FLOAT(-0.15, 0.15);
-		pev->punchangle.z = flDamage * RANDOM_FLOAT(-0.15, 0.15);
-
-		if (pev->punchangle.x < 4)
-			pev->punchangle.x = -4;
-
-		if (pev->punchangle.z < -5)
-			pev->punchangle.z = -5;
-
-		else if (pev->punchangle.z > 5)
-			pev->punchangle.z = 5;
+#ifdef REGAMEDLL_FIXES
+		// reset damage after messing with victim's punchangle
+		flDamage = 0;
+#endif
 	}
 	else
 	{
@@ -1233,7 +1225,7 @@ BOOL EXT_FUNC CBasePlayer::__API_HOOK(TakeDamage)(entvars_t *pevInflictor, entva
 
 		if (!ShouldDoLargeFlinch(m_LastHitGroup, iGunType))
 		{
-			m_flVelocityModifier = 0.5f;
+			TakeDamageImpulse(pAttack, 0.0f, 0.5f);
 
 			if (m_LastHitGroup == HITGROUP_HEAD)
 				m_bHighDamage = (flDamage > 60);
@@ -1246,10 +1238,13 @@ BOOL EXT_FUNC CBasePlayer::__API_HOOK(TakeDamage)(entvars_t *pevInflictor, entva
 		{
 			if (pev->velocity.Length() < 300)
 			{
-				Vector attack_velocity = (pev->origin - pAttack->pev->origin).Normalize() * 170;
-				pev->velocity = pev->velocity + attack_velocity;
+#ifdef REGAMEDLL_ADD
+				float knockbackValue = knockback.value;
+#else
+				float knockbackValue = 170;
+#endif
 
-				m_flVelocityModifier = 0.65f;
+				TakeDamageImpulse(pAttack, knockbackValue, 0.65f);
 			}
 
 			SetAnimation(PLAYER_LARGE_FLINCH);
@@ -1847,11 +1842,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(RemoveAllItems)(BOOL removeSuit)
 	int i;
 
 #ifdef REGAMEDLL_FIXES
-	if (m_pTank)
-	{
-		m_pTank->Use(this, this, USE_OFF, 0);
-		m_pTank = nullptr;
-	}
+	DetachTank();
 #endif
 
 	if (m_bHasDefuser)
@@ -2350,11 +2341,7 @@ void EXT_FUNC CBasePlayer::__API_HOOK(Killed)(entvars_t *pevAttacker, int iGib)
 #endif
 	}
 
-	if (m_pTank)
-	{
-		m_pTank->Use(this, this, USE_OFF, 0);
-		m_pTank = nullptr;
-	}
+	DetachTank();
 
 #ifndef REGAMEDLL_FIXES
 	CSound *pSound = CSoundEnt::SoundPointerForIndex(CSoundEnt::ClientSoundIndex(edict()));
@@ -3417,7 +3404,23 @@ void EXT_FUNC CBasePlayer::__API_HOOK(GiveShield)(bool bDeploy)
 		}
 	}
 
-#ifndef REGAMEDLL_FIXES
+#ifdef REGAMEDLL_FIXES
+	MESSAGE_BEGIN(MSG_ONE, gmsgWeaponList, nullptr, pev);
+		WRITE_STRING("weapon_shieldgun");
+		WRITE_BYTE(-1); // PrimaryAmmoID
+		WRITE_BYTE(-1); // PrimaryAmmoMaxAmount
+		WRITE_BYTE(-1); // SecondaryAmmoID
+		WRITE_BYTE(-1); // SecondaryAmmoMaxAmount
+		WRITE_BYTE(0); // SlotID (0...N)
+		WRITE_BYTE(0); // NumberInSlot (1...N)
+		WRITE_BYTE(0); // WeaponID
+		WRITE_BYTE(0); // Flags
+	MESSAGE_END();
+
+	MESSAGE_BEGIN(MSG_ONE, gmsgWeapPickup, nullptr, pev);
+		WRITE_BYTE(0); // WeaponID
+	MESSAGE_END();
+#else
 	// NOTE: Moved above, because CC4::Deploy can reset hitbox of shield
 	pev->gamestate = HITGROUP_SHIELD_ENABLED;
 #endif
@@ -3834,11 +3837,7 @@ LINK_HOOK_CLASS_VOID_CHAIN2(CBasePlayer, Disappear)
 
 void EXT_FUNC CBasePlayer::__API_HOOK(Disappear)()
 {
-	if (m_pTank)
-	{
-		m_pTank->Use(this, this, USE_OFF, 0);
-		m_pTank = nullptr;
-	}
+	DetachTank();
 
 #ifndef REGAMEDLL_FIXES
 	CSound *pSound = CSoundEnt::SoundPointerForIndex(CSoundEnt::ClientSoundIndex(edict()));
@@ -4102,11 +4101,8 @@ void EXT_FUNC CBasePlayer::__API_HOOK(StartObserver)(Vector &vecPosition, Vector
 	if (m_pActiveItem)
 		m_pActiveItem->Holster();
 
-	if (m_pTank)
-	{
-		m_pTank->Use(this, this, USE_OFF, 0);
-		m_pTank = nullptr;
-	}
+	// stop controlling any tank
+	DetachTank();
 
 	// clear out the suit message cache so we don't keep chattering
 	SetSuitUpdate(nullptr, SUIT_SENTENCE, SUIT_REPEAT_OK);
@@ -4207,12 +4203,9 @@ void CBasePlayer::PlayerUse()
 	// Hit Use on a train?
 	if (m_afButtonPressed & IN_USE)
 	{
-		if (m_pTank)
+		if (DetachTank())
 		{
-			// Stop controlling the tank
 			// TODO: Send HUD Update
-			m_pTank->Use(this, this, USE_OFF, 0);
-			m_pTank = nullptr;
 			return;
 		}
 
@@ -4389,6 +4382,19 @@ LINK_HOOK_CLASS_VOID_CHAIN2(CBasePlayer, UseEmpty)
 void EXT_FUNC CBasePlayer::__API_HOOK(UseEmpty)()
 {
 	EMIT_SOUND(ENT(pev), CHAN_ITEM, "common/wpn_denyselect.wav", 0.4, ATTN_NORM);
+}
+
+bool CBasePlayer::DetachTank()
+{
+	if (m_pTank)
+	{
+		// Stop controlling the tank
+		m_pTank->Use(this, this, USE_OFF, 0);
+		m_pTank = nullptr;
+		return true;
+	}
+
+	return false;
 }
 
 void CBasePlayer::HostageUsed()
@@ -6711,6 +6717,11 @@ void CBasePlayer::ForceClientDllUpdate()
 			WRITE_SHORT(pPlayer->m_iDeaths);
 			WRITE_SHORT(0);
 			WRITE_SHORT(pPlayer->m_iTeam);
+		MESSAGE_END();
+
+		// Update shadow sprite index
+		MESSAGE_BEGIN(MSG_ONE, gmsgShadowIdx, nullptr, pev);
+			WRITE_LONG(g_iShadowSprite);
 		MESSAGE_END();
 
 		// Update player attributes DEAD, BOMB, VIP etc
@@ -10875,6 +10886,17 @@ bool CBasePlayer::Kill()
 		CSGameRules()->m_iConsecutiveVIP = 10;
 
 	return true;
+}
+
+LINK_HOOK_CLASS_VOID_CHAIN(CBasePlayer, TakeDamageImpulse, (CBasePlayer *pAttacker, float flKnockbackForce, float flVelModifier), pAttacker, flKnockbackForce, flVelModifier)
+
+void EXT_FUNC CBasePlayer::__API_HOOK(TakeDamageImpulse)(CBasePlayer *pAttacker, float flKnockbackForce, float flVelModifier)
+{
+	if (flKnockbackForce != 0.0f)
+		pev->velocity += (pev->origin - pAttacker->pev->origin).Normalize() * flKnockbackForce;
+
+	if (flVelModifier != 0.0f)
+		m_flVelocityModifier = flVelModifier;
 }
 
 const usercmd_t *CBasePlayer::GetLastUserCommand() const
